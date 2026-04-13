@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Trading Journal (Cloud Edition)</title>
+    <link rel="icon" href="https://fav.farm/📊">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
@@ -74,6 +75,18 @@
         .notes-section span { color: var(--text-muted); }
         .amber-text { color: var(--amber); }
         .loading { align-self: flex-start; color: var(--amber); font-size: 0.9em; display: none; padding: 0 20px; margin-bottom: 10px; }
+
+        /* Responsive Fix for Mobile */
+        @media (max-width: 768px) {
+            body { overflow: auto; }
+            .container { flex-direction: column; overflow: visible; }
+            .panel { height: auto; flex: none; }
+            .left-panel { border-right: none; border-bottom: 1px solid var(--border-color); height: 500px; }
+            .right-panel { min-height: 500px; }
+            .card-grid { grid-template-columns: repeat(2, 1fr); }
+            header { flex-wrap: wrap; gap: 10px; }
+            .header-controls { flex-wrap: wrap; }
+        }
     </style>
 </head>
 <body>
@@ -212,7 +225,7 @@ Use null for missing fields. On REVIEW: win rate, avg R won/lost, common setup, 
             chatMessages.forEach(msg => {
                 const div = document.createElement('div');
                 div.className = `message msg-${msg.role}`;
-                div.setAttribute('dir', 'auto'); /* Automatically handles punctuation for any language */
+                div.setAttribute('dir', 'auto'); 
                 
                 if (msg.role === 'model') {
                     let text = msg.parts[0].text;

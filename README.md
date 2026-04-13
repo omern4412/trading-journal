@@ -81,4 +81,4 @@ If you want to use this journal and save your own trades:
 6. Click Deploy, authorize the app, copy the Web App URL, and paste it into the "Google Script URL" input in the application.
 
 ## 📱 Live Demo
-Check out the live application here: [Insert your Vercel/Netlify/GitHub Pages link here]
+Check out the live application here: [website](https://omern4412.github.io/trading-journal/)
