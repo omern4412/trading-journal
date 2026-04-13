@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Trading Journal (Cloud Edition)</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+        :root {
+            --bg-color: #080808;
+            --panel-bg: #121212;
+            --border-color: #333333;
+            --text-main: #E0E0E0;
+            --text-muted: #888888;
+            --green: #2CC84A;
+            --red: #FF4B4B;
+            --amber: #FFC107;
+            --accent: #4A90E2;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: var(--bg-color); color: var(--text-main); font-family: 'IBM Plex Mono', monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* Header */
+        header { padding: 15px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background-color: var(--bg-color); }
+        .header-controls { display: flex; gap: 15px; align-items: center; }
+        input[type="password"], input[type="text"] { background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 5px 10px; font-family: 'IBM Plex Mono', monospace; width: 160px; }
+        input::placeholder { color: #555; }
+        button { background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 15px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; transition: border-color 0.2s; border-radius: 3px; }
+        button:hover { border-color: var(--text-main); }
+        .sync-status { font-size: 0.8em; color: var(--text-muted); margin-left: 15px; display: inline-block; }
+
+        /* Main Layout */
+        .container { display: flex; flex: 1; overflow: hidden; }
+        .panel { flex: 1; display: flex; flex-direction: column; height: 100%; }
+        .left-panel { border-right: 1px solid var(--border-color); }
+
+        /* Chat Section */
+        .chat-history { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .message { max-width: 85%; padding: 12px 16px; border: 1px solid var(--border-color); line-height: 1.5; border-radius: 6px; }
+        .msg-user { align-self: flex-end; background-color: #1a1a1a; border-color: #444; }
+        .msg-model { align-self: flex-start; background-color: transparent; }
+
+        .chat-input-container { padding: 20px; border-top: 1px solid var(--border-color); display: flex; gap: 10px; }
+        textarea { flex: 1; background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 12px; font-family: 'IBM Plex Mono', monospace; resize: none; height: 60px; border-radius: 4px; }
+        textarea:focus { outline: none; border-color: var(--text-main); }
+
+        /* Cards Section */
+        .cards-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .trade-card { background: var(--panel-bg); border: 1px solid var(--border-color); padding: 15px; border-radius: 6px; animation: slideIn 0.3s ease-out forwards; opacity: 0; transform: translateY(10px); }
+        @keyframes slideIn { to { opacity: 1; transform: translateY(0); } }
+
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px dashed var(--border-color); }
+        .ticker { font-size: 1.2em; font-weight: 600; }
+        .badges { display: flex; gap: 8px; }
+        .badge { padding: 2px 8px; font-size: 0.8em; border: 1px solid; border-radius: 3px; }
+        .badge.Long { color: var(--green); border-color: var(--green); }
+        .badge.Short { color: var(--red); border-color: var(--red); }
+        .badge.Win { background: var(--green); color: var(--bg-color); border-color: var(--green); }
+        .badge.Loss { background: var(--red); color: var(--bg-color); border-color: var(--red); }
+        .badge.Breakeven { background: var(--text-muted); color: var(--bg-color); border-color: var(--text-muted); }
+        .badge.Open { border-color: var(--amber); color: var(--amber); }
+
+        .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px; font-size: 0.9em; }
+        .metric-label { color: var(--text-muted); font-size: 0.8em; text-transform: uppercase; margin-bottom: 4px; }
+        .r-bar-container { height: 4px; background: var(--border-color); width: 100%; margin-top: 5px; position: relative; border-radius: 2px; }
+        .r-bar-fill { height: 100%; position: absolute; left: 50%; border-radius: 2px; transition: width 0.3s ease; }
+        .r-bar-fill.positive { background: var(--green); }
+        .r-bar-fill.negative { background: var(--red); transform: translateX(-100%); }
+
+        .notes-section { font-size: 0.85em; background: #1a1a1a; padding: 10px; margin-top: 10px; border-radius: 4px; }
+        .notes-section p { margin-bottom: 5px; }
+        .notes-section span { color: var(--text-muted); }
+        .amber-text { color: var(--amber); }
+        .loading { align-self: flex-start; color: var(--amber); font-size: 0.9em; display: none; padding: 0 20px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div>
+            <strong>AI TRADING JOURNAL <span style="color:var(--text-muted); font-size:0.8em">(Cloud Sync)</span></strong>
+            <span id="sync-info" class="sync-status">Initializing...</span>
+        </div>
+        <div class="header-controls">
+            <input type="password" id="api-key" placeholder="Gemini API Key">
+            <input type="password" id="script-url" placeholder="Google Script URL">
+            <button id="btn-review">REQUEST REVIEW</button>
+            <button id="btn-clear">CLEAR ALL</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="panel left-panel">
+            <div class="chat-history" id="chat-history">
+                <div class="message msg-model" dir="auto">Tell me about your last trade.</div>
+            </div>
+            <div class="loading" id="loading">Processing and saving to cloud...</div>
+            <div class="chat-input-container">
+                <textarea id="trade-input" dir="auto" placeholder="e.g. Bought NVDA on 12/3, breakout at $138.50, stop $134, target $148, 2% size, execution 4/5, calm. Won at $146.20."></textarea>
+                <button id="btn-send">SEND</button>
+            </div>
+        </div>
+
+        <div class="panel right-panel">
+            <div class="cards-container" id="cards-container">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        const SYSTEM_PROMPT = `You are a trading journal AI. When a user describes a trade, respond in TWO parts:
+PART 1: One sentence in English. Flag rule violations: no impulse trades, stop always predefined, never average down.
+PART 2: Extract to JSON format exactly like this:
+\`\`\`json
+{"date":null,"ticker":"","setup_type":"breakout|pullback_ema|range|vcp|other","direction":"Long|Short","entry_price":null,"stop_price":null,"target_price":null,"r_multiple_entry":null,"position_size":null,"execution_quality":null,"emotional_state":"calm|anxious|FOMO|revenge|disciplined","result":"Win|Loss|Breakeven|Open","actual_r":null,"did_right":"","would_change":""}
+\`\`\`
+Use null for missing fields. On REVIEW: win rate, avg R won/lost, common setup, execution mistakes, emotion/result correlation, one fix.`;
+
+        let chatMessages = [];
+        let trades = [];
+
+        const chatHistoryEl = document.getElementById('chat-history');
+        const cardsContainerEl = document.getElementById('cards-container');
+        const tradeInputEl = document.getElementById('trade-input');
+        const apiKeyEl = document.getElementById('api-key');
+        const scriptUrlEl = document.getElementById('script-url');
+        const syncInfoEl = document.getElementById('sync-info');
+        const loadingEl = document.getElementById('loading');
+
+        async function init() {
+            const savedKey = localStorage.getItem('tj_apikey');
+            const savedUrl = localStorage.getItem('tj_scripturl');
+            
+            if (savedKey) apiKeyEl.value = savedKey;
+            if (savedUrl) {
+                scriptUrlEl.value = savedUrl;
+                await refreshDataFromCloud();
+            } else {
+                const savedTrades = localStorage.getItem('tj_trades');
+                if (savedTrades) trades = JSON.parse(savedTrades);
+                renderTrades();
+                syncInfoEl.innerText = "Ready (Local Mode)";
+            }
+
+            const savedChat = localStorage.getItem('tj_chat');
+            if (savedChat) chatMessages = JSON.parse(savedChat);
+            renderChat();
+        }
+
+        async function refreshDataFromCloud() {
+            const url = scriptUrlEl.value.trim();
+            if (!url) return;
+
+            syncInfoEl.innerText = "Syncing...";
+            syncInfoEl.style.color = "var(--amber)";
+            try {
+                const response = await fetch(url);
+                const cloudData = await response.json();
+                trades = cloudData;
+                renderTrades();
+                syncInfoEl.innerText = "Synced: Google Sheets";
+                syncInfoEl.style.color = "var(--green)";
+            } catch (e) {
+                console.error(e);
+                syncInfoEl.innerText = "Offline / Sync Error";
+                syncInfoEl.style.color = "var(--red)";
+            }
+        }
+
+        async function saveTradeToCloud(tradeData) {
+            const url = scriptUrlEl.value.trim();
+            
+            trades.push(tradeData);
+            localStorage.setItem('tj_trades', JSON.stringify(trades));
+            renderTrades();
+
+            if (!url) {
+                syncInfoEl.innerText = "Saved Locally Only";
+                return;
+            }
+
+            syncInfoEl.innerText = "Saving to Cloud...";
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(tradeData)
+                });
+                syncInfoEl.innerText = "Saved to Sheets";
+                setTimeout(() => {
+                    syncInfoEl.innerText = "Synced: Google Sheets";
+                    syncInfoEl.style.color = "var(--green)";
+                }, 2000);
+            } catch (e) {
+                console.error(e);
+                syncInfoEl.innerText = "Failed to save to cloud";
+                syncInfoEl.style.color = "var(--red)";
+            }
+        }
+
+        function saveState() {
+            localStorage.setItem('tj_chat', JSON.stringify(chatMessages));
+            localStorage.setItem('tj_apikey', apiKeyEl.value);
+            localStorage.setItem('tj_scripturl', scriptUrlEl.value);
+        }
+
+        function renderChat() {
+            chatHistoryEl.innerHTML = '<div class="message msg-model" dir="auto">Tell me about your last trade.</div>';
+            chatMessages.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = `message msg-${msg.role}`;
+                div.setAttribute('dir', 'auto'); /* Automatically handles punctuation for any language */
+                
+                if (msg.role === 'model') {
+                    let text = msg.parts[0].text;
+                    const jsonStart = text.indexOf('```json');
+                    if (jsonStart !== -1) {
+                        text = text.substring(0, jsonStart).trim();
+                    } else if (text.indexOf('{') !== -1) {
+                         text = text.substring(0, text.indexOf('{')).trim();
+                    }
+                    div.innerText = text;
+                } else {
+                    div.innerText = msg.parts[0].text;
+                }
+                
+                chatHistoryEl.appendChild(div);
+            });
+            chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+        }
+
+        function getExecutionDots(quality) {
+            if (!quality || isNaN(quality)) return '○○○○○';
+            const val = Math.max(1, Math.min(5, parseInt(quality)));
+            return '●'.repeat(val) + '○'.repeat(5 - val);
+        }
+
+        function getRBarStyle(actualR) {
+            if (!actualR) return 'width: 0%;';
+            const r = parseFloat(actualR);
+            const width = Math.min(100, Math.abs(r) * 20); 
+            return `width: ${width}%;`;
+        }
+
+        function renderTrades() {
+            cardsContainerEl.innerHTML = '';
+            [...trades].reverse().forEach(trade => {
+                const card = document.createElement('div');
+                card.className = 'trade-card';
+                const rAtEntry = trade.r_multiple_entry ? trade.r_multiple_entry : '-';
+                const actualR = trade.actual_r ? trade.actual_r : '-';
+                const isPositiveR = parseFloat(actualR) > 0;
+
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div>
+                            <span class="ticker">${trade.ticker || 'UNKNOWN'}</span>
+                            <span style="color: var(--text-muted); margin-left: 10px; font-size: 0.9em;">${trade.date || ''}</span>
+                        </div>
+                        <div class="badges">
+                            <span class="badge ${trade.direction || ''}">${trade.direction || 'N/A'}</span>
+                            <span class="badge ${trade.result || ''}">${trade.result || 'N/A'}</span>
+                        </div>
+                    </div>
+                    <div class="card-grid">
+                        <div><div class="metric-label">Setup</div><div>${trade.setup_type || '-'}</div></div>
+                        <div><div class="metric-label">Execution</div><div>${getExecutionDots(trade.execution_quality)}</div></div>
+                        <div><div class="metric-label">Emotion</div><div>${trade.emotional_state || '-'}</div></div>
+                        <div><div class="metric-label">Entry</div><div>$${trade.entry_price || '-'}</div></div>
+                        <div><div class="metric-label">Stop</div><div>$${trade.stop_price || '-'}</div></div>
+                        <div><div class="metric-label">Target</div><div>$${trade.target_price || '-'}</div></div>
+                        <div><div class="metric-label">R at Entry</div><div class="amber-text">${rAtEntry}</div></div>
+                        <div style="grid-column: span 2;">
+                            <div class="metric-label">Actual R (${actualR})</div>
+                            <div class="r-bar-container">
+                                <div class="r-bar-fill ${isPositiveR ? 'positive' : 'negative'}" style="${getRBarStyle(actualR)}"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="notes-section" dir="auto">
+                        <p><span>Did Right:</span> ${trade.did_right || '-'}</p>
+                        <p><span>Would Change:</span> ${trade.would_change || '-'}</p>
+                    </div>
+                `;
+                cardsContainerEl.appendChild(card);
+            });
+        }
+
+        async function callAPI(userText, isReview = false) {
+            const apiKey = apiKeyEl.value.trim();
+            if (!apiKey) {
+                alert('Please enter your Gemini API Key in the header.');
+                return;
+            }
+
+            const userMsg = { role: 'user', parts: [{ text: userText }] };
+            chatMessages.push(userMsg);
+            renderChat();
+            
+            tradeInputEl.value = '';
+            loadingEl.style.display = 'block';
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
+            
+            const payload = {
+                systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+                contents: chatMessages
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error('API Request Failed');
+
+                const data = await response.json();
+                const aiText = data.candidates[0].content.parts[0].text;
+
+                chatMessages.push({ role: 'model', parts: [{ text: aiText }] });
+
+                if (!isReview) {
+                    const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        try {
+                            const tradeData = JSON.parse(jsonMatch[0]);
+                            await saveTradeToCloud(tradeData);
+                        } catch (e) {
+                            console.error("Failed to parse JSON:", e);
+                        }
+                    }
+                }
+
+                saveState();
+                renderChat();
+
+            } catch (error) {
+                console.error(error);
+                alert('Error communicating with AI. Check your API Key.');
+                chatMessages.pop(); 
+                renderChat();
+            } finally {
+                loadingEl.style.display = 'none';
+            }
+        }
+
+        document.getElementById('btn-send').addEventListener('click', () => {
+            const text = tradeInputEl.value.trim();
+            if (text) callAPI(text);
+        });
+
+        tradeInputEl.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                const text = tradeInputEl.value.trim();
+                if (text) callAPI(text);
+            }
+        });
+
+        document.getElementById('btn-review').addEventListener('click', () => {
+            if (trades.length === 0) return alert("No trades to review yet.");
+            callAPI("REQUEST REVIEW: Please review my trading history based on the JSON objects provided. Provide win rate, avg R won/lost, common setup, execution mistakes, emotion/result correlation, and ONE specific fix.", true);
+        });
+
+        document.getElementById('btn-clear').addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear chat history? (Cloud data will NOT be deleted)')) {
+                chatMessages = [];
+                localStorage.removeItem('tj_chat');
+                renderChat();
+            }
+        });
+
+        apiKeyEl.addEventListener('change', saveState);
+        scriptUrlEl.addEventListener('change', () => {
+            saveState();
+            refreshDataFromCloud();
+        });
+
+        init();
+    </script>
+</body>
+</html>
