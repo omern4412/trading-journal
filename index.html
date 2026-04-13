@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Trading Journal (Cloud Edition)</title>
-    <link rel="icon" href="https://fav.farm/📊">
+    <link rel="icon" href="https://fav.farm/📈">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
@@ -316,7 +316,8 @@ Use null for missing fields. On REVIEW: win rate, avg R won/lost, common setup, 
             tradeInputEl.value = '';
             loadingEl.style.display = 'block';
 
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
+            // ---> HERE IS THE FIXED LINE <---
+            const url = '[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=)' + apiKey;
             
             const payload = {
                 systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
