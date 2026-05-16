@@ -123,9 +123,9 @@
     </div>
 
     <script>
-        const SYSTEM_PROMPT = `You are a trading journal AI. When a user describes trades, respond in TWO parts:
-PART 1: One short sentence in English. Flag rule violations.
-PART 2: Extract the data to a JSON ARRAY format exactly like this, even if there is only a single trade:
+    const SYSTEM_PROMPT = `You are a trading journal AI. When a user describes trades, respond in TWO parts:
+PART 1: One short sentence total. Flag rule violations.
+PART 2: Extract ALL trades into a SINGLE JSON ARRAY. You MUST wrap everything in [ ]. Even if it is just one trade, use [ ]. DO NOT create separate JSON blocks for each stock. Put them all inside ONE array.
 \`\`\`json
 [
   {"date":null,"ticker":"","setup_type":"","direction":"Long|Short","entry_price":null,"stop_price":null,"target_price":null,"r_multiple_entry":null,"position_size":null,"execution_quality":null,"emotional_state":"","result":"Win|Loss|Breakeven|Open","actual_r":null,"did_right":"","would_change":""}
@@ -184,7 +184,7 @@ Use null for missing fields. On REVIEW: win rate, avg R won/lost, common setup, 
             }
         }
 
-        async function saveTradeToCloud(tradeData) {
+async function saveTradeToCloud(tradeData) {
             const url = scriptUrlEl.value.trim();
             
             trades.push(tradeData);
@@ -200,8 +200,6 @@ Use null for missing fields. On REVIEW: win rate, avg R won/lost, common setup, 
             try {
                 await fetch(url, {
                     method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(tradeData)
                 });
                 syncInfoEl.innerText = "Saved to Sheets";
@@ -215,7 +213,7 @@ Use null for missing fields. On REVIEW: win rate, avg R won/lost, common setup, 
                 syncInfoEl.style.color = "var(--red)";
             }
         }
-
+        
         function saveState() {
             localStorage.setItem('tj_chat', JSON.stringify(chatMessages));
             localStorage.setItem('tj_apikey', apiKeyEl.value);
